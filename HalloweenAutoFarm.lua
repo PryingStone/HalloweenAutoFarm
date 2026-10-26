@@ -11,6 +11,40 @@
 -- if your server already uses one for door interactions. Do not create a
 -- client-trusted reward remote; the server must validate distance, door state,
 -- night state, and award the reward itself.
+-- Teleport-resume support for executors that expose a queue-on-teleport API.
+-- This queues the hosted script for the next in-game teleport. It does NOT
+-- automatically run when you manually leave Roblox and rejoin; use your
+-- executor's own auto-execute feature for that case.
+local HALLOWEEN_SCRIPT_URL =
+    "https://raw.githubusercontent.com/PryingStone/HalloweenAutoFarm/main/HalloweenAutoFarm.lua"
+
+local function queueHalloweenFarmAfterTeleport()
+    local queueFn =
+        queue_on_teleport
+        or queueonteleport
+        or (syn and syn.queue_on_teleport)
+        or (fluxus and fluxus.queue_on_teleport)
+
+    if type(queueFn) ~= "function" then
+        warn("[HalloweenFarm] No supported queue-on-teleport API found; teleport resume is unavailable in this executor.")
+        return
+    end
+
+    local queuedCode = string.format(
+        'task.wait(2); loadstring(game:HttpGet(%q))()',
+        HALLOWEEN_SCRIPT_URL
+    )
+
+    local ok, err = pcall(queueFn, queuedCode)
+    if ok then
+        print("[HalloweenFarm] Queued to resume after the next teleport.")
+    else
+        warn("[HalloweenFarm] Could not queue after teleport:", err)
+    end
+end
+
+queueHalloweenFarmAfterTeleport()
+
 local Players = game:GetService("Players")
 local PathfindingService = game:GetService("PathfindingService")
 local Lighting = game:GetService("Lighting")
